@@ -25,15 +25,17 @@
 #include <fstream>
 #include <functional>
 #include <type_traits>
+#include <cstring>
 
 #define NSPRE_VERSION_MAJOR 1
 #define NSPRE_VERSION_MINOR 0
-#define NSPRE_VERSION_MINOR_MINOR 0
+#define NSPRE_VERSION_MINOR_MINOR 1
 
 namespace nspre
 {
 
 enum Error : int {
+	ALREADY_OPEN = -2,
 	UNINITIALIZED = -1,
 	NO_ERROR = 0,
 	FILE_OPEN = 1,
@@ -84,8 +86,12 @@ private:
 	char m_header[12];
 	int m_size;
 	int m_error = Error::UNINITIALIZED;
+	void construct(const std::filesystem::path& path);
 public:
+	Reader(){};
 	Reader(const std::filesystem::path& path);
+	int open(const std::filesystem::path& path);
+	void close();
 	std::vector<Subfile>& files();
 	int size();
 	std::vector<char> header();
@@ -168,7 +174,31 @@ int Reader::error() {
 	return m_error;
 }
 
+int Reader::open(const std::filesystem::path& path) {
+	if (stream.is_open() || !m_error) {
+		return Error::ALREADY_OPEN;
+	}
+
+	construct(path);
+	return m_error;
+}
+
+void Reader::close() {
+	if (stream.is_open()) {
+		stream.close();
+	}
+
+	m_files.clear();
+	std::memset(m_header, 0, 12);
+	m_size = 0;
+	m_error = Error::UNINITIALIZED;
+}
+
 Reader::Reader(const std::filesystem::path& path) {
+	construct(path);
+}
+
+void Reader::construct(const std::filesystem::path& path) {
 	stream.open(path, std::ios::binary);
 	if (stream.fail()) {
 		m_error = Error::FILE_OPEN;

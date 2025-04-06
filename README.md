@@ -27,6 +27,17 @@ Constructor for the Reader class.
 
 `path:` Path to the pre/prx file to be read
 
+#### `Reader::Reader()`
+Constructor for the Reader class. You must use Reader::open() before you can do anything.
+
+#### `int Reader::open(const std::filesystem::path& path)`
+Open a pre/prx file. Equivalent to the Reader(const std::filesystem::path& path) constructor.
+
+`path:` Path to the pre/prx file to be read
+
+#### `void Reader::close()`
+Reset a Reader to an uninitialized state.
+
 #### `std::vector<Subfile>& Reader::files()`
 Returns the [Subfiles](#nsprereadersubfile) from a successfully opened pre/prx file. Will be an empty vector if opening the file failed.
 
