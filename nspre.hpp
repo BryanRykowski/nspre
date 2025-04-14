@@ -29,7 +29,23 @@
 
 #define NSPRE_VERSION_MAJOR 1
 #define NSPRE_VERSION_MINOR 0
-#define NSPRE_VERSION_MINOR_MINOR 1
+#define NSPRE_VERSION_MINOR_MINOR 2
+
+#ifndef NSPRE_MIN_SIZE
+#define NSPRE_MIN_SIZE 36
+#endif
+
+#ifndef NSPRE_MAX_SIZE
+#define NSPRE_MAX_SIZE 524288000
+#endif
+
+#ifndef NSPRE_MAX_COUNT
+#define NSPRE_MAX_COUNT 200
+#endif
+
+#ifndef NSPRE_PATH_MAX
+#define NSPRE_PATH_MAX 256
+#endif
 
 namespace nspre
 {
@@ -42,6 +58,7 @@ enum Error : int {
 	READ_HEADER = 2,
 	READ_SUBHEADER = 3,
 	READ_SUBPATH = 4,
+	BAD_FILE = 5,
 	READ_SUBFILE = 256,
 	EXTRACT_SUBFILE = 257,
 	FILE_OPEN_OUTPUT = 258,
@@ -222,6 +239,11 @@ void Reader::construct(const std::filesystem::path& path) {
 	m_size = Read32LE<int>(m_header);
 	int count = Read32LE<int>(m_header + 8);
 
+	if (m_size < NSPRE_MIN_SIZE || m_size > NSPRE_MAX_SIZE || count > NSPRE_MAX_COUNT) {
+		m_error = Error::BAD_FILE;
+		return;
+	}
+
 	for (int i = 0; i < count; ++i) {
 		char subheader[16];
 		stream.read(subheader, 16);
@@ -240,6 +262,12 @@ void Reader::construct(const std::filesystem::path& path) {
 		// n    Path string (size is a multiple of 4)
 
 		int path_size = Read32LE<int>(&subheader[8]); // Path string length is always a multiple of 4 bytes.
+
+		if (path_size < 4 || path_size > NSPRE_PATH_MAX) {
+			m_error = Error::BAD_FILE;
+			return;
+		}
+
 		std::vector<char> path_bytes(path_size);
 		stream.read(&path_bytes[0], path_size);
 		if (stream.fail()) {
